@@ -1,0 +1,8 @@
+services:
+  kk-monitor:
+    image: kk-monitor:latest
+    container_name: kk-monitor
+    restart: always
+    volumes:
+      - ./config.yaml:/app/config.yaml
+      - ./logs:/app/logs

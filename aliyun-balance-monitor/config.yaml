@@ -1,0 +1,26 @@
+telegram:
+  token: "token"
+  chat_id: -00000
+
+# 检测间隔（秒）
+interval: 3600
+
+accounts:
+
+  - name: 阿里云-A用途
+    account: a@qq.com
+    group: AAA
+    country: EN
+    keyid: keyid
+    keysecret: keysecret
+    threshold: 100
+
+  - name: 阿里云-B用途
+    account: b@qq.com
+    group: 言语
+    country: EN
+    keyid: keyid
+    keysecret: keysecret
+    threshold: 100
+
+

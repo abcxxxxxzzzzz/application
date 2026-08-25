@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncmy
+redis
+pydantic
+pydantic-settings
+jinja2
+python-multipart

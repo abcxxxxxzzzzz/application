@@ -1,0 +1,41 @@
+base_url: "https://www.kk.yun"
+
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/138 Safari/537.36"
+
+timeout: 20
+
+# 监控周期，秒
+interval: 60
+
+# 查询任务结果间隔，秒
+poll_interval: 3
+
+log_dir: "./logs"
+
+
+projects:
+  - name: "CDN-V1"
+    domain: "https://a.com"
+
+  - name: "CDN-V2"
+    domain: "https://b.com"
+
+
+# 单项失败超过5个告警
+alarm_threshold: 5
+
+# 同项目冷却时间
+alarm_cooldown: 300
+
+# 告警确认次数（1=关闭二次确认，2=二次确认，3=三次确认...）
+alarm_confirm_times: 3
+
+# 每次确认间隔（秒）, 当异常后的 再次检测间隔时间
+alarm_confirm_interval: 3
+
+
+telegram_enable: true
+
+telegram_bot_token: "token"
+
+telegram_chat_id: "-0000"
