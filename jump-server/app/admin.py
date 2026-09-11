@@ -1598,6 +1598,10 @@ async def batch_replace_target_domain(
     updated_domains = 0
     updated_targets = 0
 
+    # 需要清理 Redis 的域名
+    domain_names = []
+
+
     for domain in domains:
 
         domain_changed = False
@@ -1643,10 +1647,18 @@ async def batch_replace_target_domain(
                 updated_targets += 1
                 domain_changed = True
 
+
         if domain_changed:
             updated_domains += 1
 
+            # 只要这个域名任意目标发生变化，就清理一次 Redis
+            domain_names.append(domain.domain)    
+
     await db.commit()
+
+    # 清理 Redis
+    if domain_names:
+        await delete_domain_caches(domain_names)
 
     return {
         "updated_domains": updated_domains,

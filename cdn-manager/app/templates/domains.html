@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>域名管理 - CDN Manager</title>
+
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+
+</head>
+
+<body class="min-h-screen bg-gray-100 text-gray-900">
+
+<div class="flex min-h-screen">
+
+
+<!-- ==================== Sidebar ==================== -->
+<aside class="relative flex w-56 shrink-0 flex-col bg-gray-900 text-white">
+
+    <div class="border-b border-gray-700 px-6 py-5 text-xl font-bold">
+        CDN Manager
+    </div>
+
+    <nav class="flex-1 space-y-1 p-3">
+
+        <a
+            href="/"
+            class="block rounded px-4 py-3 text-gray-300 transition hover:bg-gray-800 hover:text-white"
+        >
+            首页
+        </a>
+
+        <a
+            href="/groups"
+            class="block rounded px-4 py-3 text-gray-300 transition hover:bg-gray-800 hover:text-white"
+        >
+            分组管理
+        </a>
+
+        <a
+            href="/domains"
+            class="block rounded bg-gray-800 px-4 py-3 text-white"
+        >
+            域名管理
+        </a>
+
+        <a
+            href="/cdn-accounts"
+            class="block rounded px-4 py-3 text-gray-300 transition hover:bg-gray-800 hover:text-white"
+        >
+            Cloudflare 账号
+        </a>
+
+    </nav>
+
+    <div class="border-t border-gray-700 p-3">
+        <button
+            type="button"
+            onclick="logout()"
+            class="w-full rounded bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700"
+        >
+            退出登录
+        </button>
+    </div>
+
+</aside>
+
+
+<!-- ==================== Main ==================== -->
+<main class="min-w-0 flex-1">
+
+    <!-- Header -->
+    <header class="border-b bg-white px-8 py-5">
+
+        <div class="flex items-center justify-between">
+
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">
+                    域名管理
+                </h1>
+
+                <p class="mt-1 text-sm text-gray-500">
+                    管理域名、CDN 配置以及 CDN 切换
+                </p>
+            </div>
+
+            <button
+                type="button"
+                onclick="openDomainModal()"
+                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+                + 添加域名
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- Content -->
+    <div class="p-8">
+
+        <div class="overflow-hidden rounded-lg bg-white shadow-sm">
+
+            <div class="overflow-x-auto">
+
+                <table class="w-full min-w-[1000px]">
+
+                    <thead class="border-b bg-gray-50">
+
+                    <tr>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-left text-sm font-semibold text-gray-700">
+                            域名
+                        </th>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-left text-sm font-semibold text-gray-700">
+                            分组
+                        </th>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-left text-sm font-semibold text-gray-700">
+                            CF 账户
+                        </th>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-left text-sm font-semibold text-gray-700">
+                            当前 CDN
+                        </th>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-left text-sm font-semibold text-gray-700">
+                            切换状态
+                        </th>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-left text-sm font-semibold text-gray-700">
+                            最近备注
+                        </th>
+
+                        <th class="whitespace-nowrap px-5 py-4 text-right text-sm font-semibold text-gray-700">
+                            操作
+                        </th>
+
+                    </tr>
+
+                    </thead>
+
+                    <tbody
+                        id="domainsTableBody"
+                        class="divide-y divide-gray-100"
+                    >
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</main>
+
+
+</div>
+
+<!-- ========================================================= -->
+
+<!-- Domain Modal -->
+
+<!-- ========================================================= -->
+
+<div
+    id="domainModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4"
+>
+
+
+<div
+    class="w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-xl"
+>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b px-6 py-4">
+
+        <h2
+            id="domainModalTitle"
+            class="text-lg font-semibold text-gray-900"
+        >
+            添加域名
+        </h2>
+
+        <button
+            type="button"
+            onclick="closeDomainModal()"
+            class="rounded p-1 text-2xl leading-none text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <!-- Form -->
+    <form id="domainForm">
+
+        <div class="space-y-5 px-6 py-6">
+
+            <input
+                id="domainId"
+                type="hidden"
+            >
+
+
+            <!-- Group -->
+            <div>
+
+                <label
+                    for="domainGroupId"
+                    class="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                    分组
+                </label>
+
+                <select
+                    id="domainGroupId"
+                    required
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                >
+                </select>
+
+            </div>
+
+
+            <!-- Cloudflare Account -->
+            <div>
+
+                <label
+                    for="domainCDNAccountId"
+                    class="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                    Cloudflare 账号
+                </label>
+
+                <select
+                    id="domainCDNAccountId"
+                    required
+                    class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                >
+                </select>
+
+            </div>
+
+
+            <!-- Domain -->
+            <div>
+
+                <label
+                    for="domainName"
+                    class="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                    域名
+                </label>
+
+                <input
+                    id="domainName"
+                    type="text"
+                    required
+                    class="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                    placeholder="例如：www.example.com"
+                >
+
+                <p class="mt-1.5 text-xs text-gray-500">
+                    保存时自动从 Cloudflare 获取 Zone ID
+                </p>
+
+            </div>
+
+
+            <!-- Enabled -->
+            <div>
+
+                <label class="flex cursor-pointer items-center gap-2">
+
+                    <input
+                        id="domainEnabled"
+                        type="checkbox"
+                        checked
+                        class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                    >
+
+                    <span class="text-sm font-medium text-gray-700">
+                        启用 CDN 切换
+                    </span>
+
+                </label>
+
+            </div>
+
+        </div>
+
+
+        <!-- Footer -->
+        <div class="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4">
+
+            <button
+                type="button"
+                onclick="closeDomainModal()"
+                class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+            >
+                取消
+            </button>
+
+            <button
+                type="submit"
+                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+                保存
+            </button>
+
+        </div>
+
+    </form>
+
+</div>
+
+
+</div>
+
+<!-- ========================================================= -->
+
+<!-- CDN Target Modal -->
+
+<!-- ========================================================= -->
+
+<div
+    id="cdnTargetModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4"
+>
+
+
+<div
+    class="w-full max-w-3xl overflow-hidden rounded-xl bg-white shadow-xl"
+>
+
+    <!-- Header -->
+    <div class="border-b px-6 py-4">
+
+        <div class="flex items-center justify-between">
+
+            <h2 class="text-lg font-semibold text-gray-900">
+                CDN CNAME 配置
+            </h2>
+
+            <button
+                type="button"
+                onclick="closeCDNTargetModal()"
+                class="rounded p-1 text-2xl leading-none text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+            >
+                ×
+            </button>
+
+        </div>
+
+        <p
+            id="cdnTargetDomain"
+            class="mt-1 text-sm text-gray-500"
+        ></p>
+
+    </div>
+
+
+    <!-- Content -->
+    <div class="px-6 py-6">
+
+        <!-- Add CDN Target -->
+        <div class="mb-5 grid grid-cols-[140px_1fr_auto_auto] gap-3">
+
+            <input
+                id="targetCDN"
+                type="text"
+                class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                placeholder="CDN，例如 aws"
+            >
+
+            <input
+                id="targetCNAME"
+                type="text"
+                class="rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                placeholder="CNAME，例如 xxx.cloudfront.net"
+            >
+
+            <label class="flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg border border-gray-300 px-3">
+
+                <input
+                    id="targetProxied"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
+                >
+
+                <span class="text-sm text-gray-700">
+                    CF 代理
+                </span>
+
+            </label>
+
+            <button
+                type="button"
+                onclick="addCDNTarget()"
+                class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700"
+            >
+                添加
+            </button>
+
+        </div>
+
+
+        <!-- Table -->
+        <div class="overflow-hidden rounded-lg border border-gray-200">
+
+            <table class="w-full">
+
+                <thead class="border-b bg-gray-50">
+
+                <tr>
+
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                        CDN
+                    </th>
+
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                        CNAME
+                    </th>
+
+                    <th class="px-4 py-3 text-left text-sm font-semibold text-gray-700">
+                        CF 代理
+                    </th>
+
+                    <th class="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                        操作
+                    </th>
+
+                </tr>
+
+                </thead>
+
+                <tbody
+                    id="cdnTargetsTableBody"
+                    class="divide-y divide-gray-100"
+                >
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+</div>
+
+<!-- ========================================================= -->
+
+<!-- Switch Modal -->
+
+<!-- ========================================================= -->
+
+<div
+    id="switchModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-black/50 p-4"
+>
+
+
+<div
+    class="w-full max-w-md overflow-hidden rounded-xl bg-white shadow-xl"
+>
+
+    <!-- Header -->
+    <div class="flex items-center justify-between border-b px-6 py-4">
+
+        <h2 class="text-lg font-semibold text-gray-900">
+            切换 CDN
+        </h2>
+
+        <button
+            type="button"
+            onclick="closeSwitchModal()"
+            class="rounded p-1 text-2xl leading-none text-gray-400 transition hover:bg-gray-100 hover:text-gray-600"
+        >
+            ×
+        </button>
+
+    </div>
+
+
+    <!-- Content -->
+    <div class="space-y-5 px-6 py-6">
+
+        <input
+            id="switchDomainId"
+            type="hidden"
+        >
+
+
+        <!-- Domain -->
+        <div>
+
+            <label class="mb-1.5 block text-sm font-medium text-gray-700">
+                域名
+            </label>
+
+            <div
+                id="switchDomainName"
+                class="rounded-lg bg-gray-100 px-3 py-2.5 text-sm font-medium text-gray-800"
+            ></div>
+
+        </div>
+
+
+        <!-- CDN -->
+        <div>
+
+            <label
+                for="switchCDN"
+                class="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+                切换到
+            </label>
+
+            <select
+                id="switchCDN"
+                class="w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            >
+            </select>
+
+        </div>
+
+
+        <!-- Remark -->
+        <div>
+
+            <label
+                for="switchRemark"
+                class="mb-1.5 block text-sm font-medium text-gray-700"
+            >
+                备注
+            </label>
+
+            <textarea
+                id="switchRemark"
+                rows="3"
+                maxlength="500"
+                class="w-full resize-none rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                placeholder="例如：临时切换到 AWS"
+            ></textarea>
+
+        </div>
+
+    </div>
+
+
+    <!-- Footer -->
+    <div class="flex justify-end gap-3 border-t bg-gray-50 px-6 py-4">
+
+        <button
+            type="button"
+            onclick="closeSwitchModal()"
+            class="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+        >
+            取消
+        </button>
+
+        <button
+            type="button"
+            onclick="confirmSwitch()"
+            class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+            确认切换
+        </button>
+
+    </div>
+
+</div>
+
+
+</div>
+
+<!-- ==================== JavaScript ==================== -->
+
+<script src="/static/js/common.js"></script>
+
+<script src="/static/js/domains.js"></script>
+
+</body>
+</html>

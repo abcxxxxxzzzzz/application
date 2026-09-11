@@ -66,7 +66,7 @@ def append_group_params(
 
 
 
-## 只改 hostname，不碰 path/query/fragment：
+# 只改 hostname，不碰 path/query/fragment
 def replace_target_hostname(
     target: str,
     old_domain: str,
@@ -86,6 +86,7 @@ def replace_target_hostname(
     new_domain = (
         new_domain
         .strip()
+        .lower()
         .removeprefix("*.")
     )
 
@@ -114,10 +115,7 @@ def replace_target_hostname(
 
     # 处理端口
     if ":" in hostname:
-        hostname_only, port = hostname.rsplit(
-            ":",
-            1,
-        )
+        hostname_only, port = hostname.rsplit(":", 1)
 
         if port.isdigit():
             hostname = hostname_only
@@ -127,12 +125,30 @@ def replace_target_hostname(
     else:
         port = ""
 
-    if hostname.lower() != old_domain:
+    hostname_lower = hostname.lower()
+
+    # 原域名本身，或者原域名的子域名
+    if (
+        hostname_lower != old_domain
+        and not hostname_lower.endswith("." + old_domain)
+    ):
         return target
+
+    # 保留原来的子域名前缀
+    if hostname_lower == old_domain:
+        prefix = ""
+    else:
+        prefix = hostname[:-(len(old_domain) + 1)]
+
+    new_hostname = (
+        f"{prefix}.{new_domain}"
+        if prefix
+        else new_domain
+    )
 
     new_authority = (
         wildcard +
-        new_domain +
+        new_hostname +
         port
     )
 

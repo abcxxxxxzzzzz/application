@@ -1,0 +1,101 @@
+services:
+
+  mysql:
+    image: mysql:8.4
+    container_name: cdn-manager-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: Asia/Bangkok
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      #- --default-authentication-plugin=mysql_native_password
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "mysqladmin",
+          "ping",
+          "-h",
+          "localhost",
+          "-u${MYSQL_USER}",
+          "-p${MYSQL_PASSWORD}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: cdn-manager-redis
+  #   restart: unless-stopped
+  #   command:
+  #     - redis-server
+  #     - --appendonly
+  #     - "yes"
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   healthcheck:
+  #     test:
+  #       [
+  #         "CMD",
+  #         "redis-cli",
+  #         "ping"
+  #       ]
+  #     interval: 5s
+  #     timeout: 3s
+  #     retries: 20
+
+  api:
+    build: .
+    container_name: cdn-manager-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      mysql:
+        condition: service_healthy
+      # redis:
+      #   condition: service_healthy
+    ports:
+      - "8000:8000"
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ]
+
+  # worker:
+  #   build: .
+  #   container_name: cdn-manager-worker
+  #   restart: unless-stopped
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     mysql:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   command:
+  #     [
+  #       "arq",
+  #       "app.workers.settings.WorkerSettings"
+  #     ]
+
+volumes:
+  mysql_data:
+  redis_data:

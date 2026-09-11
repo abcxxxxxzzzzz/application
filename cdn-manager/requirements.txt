@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+asyncmy
+pydantic-settings
+redis
+arq
+httpx
+itsdangerous
+jinja2
+cloudflare
