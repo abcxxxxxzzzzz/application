@@ -280,6 +280,35 @@
 
                 </select>
 
+                <!-- 类型 -->
+                <select
+                    id="methodFilter"
+                    class="admin-input w-36
+                          !border-gray-200
+                          focus:!border-blue-400
+                          focus:!ring-2
+                          focus:!ring-blue-100">
+
+                    <option value="">
+                        全部方法
+                    </option>
+
+                    <option value="redirect">
+                        redirect
+                    </option>
+
+                    <option value="js">
+                        js
+                    </option>
+
+                    <option value="html">
+                        html
+                    </option>
+
+                    <option value="iframe">
+                        iframe
+                    </option>
+                </select>
 
                 <!-- 状态 -->
                 <select
@@ -641,6 +670,7 @@
                         <option value="redirect">直接重定向</option>
                         <option value="js">JS 混淆跳转</option>
                         <option value="html">HTML 跳转</option>
+                        <option value="iframe">iframe 嵌套</option>
                     </select>
                 </div>
 
@@ -829,15 +859,10 @@
                 <select
                     id="batchJumpMethod"
                     class="admin-input w-full">
-                    <option value="redirect">
-                        直接重定向
-                    </option>
-                    <option value="js">
-                        JS 混淆跳转
-                    </option>
-                    <option value="html">
-                        HTML 跳转
-                    </option>
+                    <option value="redirect">直接重定向</option>
+                    <option value="js">JS 混淆跳转</option>
+                    <option value="html">HTML 跳转</option>
+                    <option value="iframe">iframe 嵌套</option>
                 </select>
             </div>
             <div>
@@ -1037,6 +1062,7 @@ d.com https://*.google.com/?code=2"></textarea>
                     <option value="redirect">直接重定向</option>
                     <option value="js" selected>JS 混淆跳转</option>
                     <option value="html">HTML 跳转</option>
+                    <option value="iframe">iframe 嵌套</option>
                 </select>
 
             </div>

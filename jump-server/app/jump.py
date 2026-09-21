@@ -64,6 +64,7 @@ async def jump(
     # 负责解析目标；负责参数拼接; 最终跳转的地址
     target = append_group_params(target, config)
 
+
     return make_jump_response(
         target=target,
         status_code=config[
@@ -76,3 +77,18 @@ async def jump(
             "embedded_code"
         ),
     )
+
+
+    # # 模拟下只 iframe 方式
+    # print("============iframeiframeiframeiframeiframeiframe")
+    # print(f"============{target}")
+    # return make_jump_response(
+    #     target=target,
+    #     status_code=config[
+    #         "status_code"
+    #     ],
+    #     jump_method="iframe",
+    #     embedded_code=config.get(
+    #         "embedded_code"
+    #     ),
+    # )

@@ -21,6 +21,7 @@ JumpMethod = Literal[
     "redirect",
     "js",
     "html",
+    "iframe",
 ]
 
 
@@ -474,11 +475,7 @@ class BatchTargetCreateRequest(BaseModel):
 
     group_id: int | None = None
 
-    jump_method: Literal[
-        "redirect",
-        "js",
-        "html",
-    ] = "redirect"
+    jump_method: JumpMethod = "redirect"
 
     status_code: int = 302
 

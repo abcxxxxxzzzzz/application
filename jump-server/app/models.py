@@ -94,7 +94,7 @@ class Domain(Base):
         index=True,
     )
 
-    # redirect / js / html
+    # redirect / js / html / iframe
     jump_method: Mapped[str] = mapped_column(
         String(20),
         nullable=False,

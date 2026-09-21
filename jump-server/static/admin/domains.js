@@ -38,6 +38,13 @@ async function loadDomains() {
             )
             .value;
 
+    const method =
+        document
+            .getElementById(
+                "methodFilter"
+            )
+            .value;
+
     const enabled =
         document
             .getElementById(
@@ -61,6 +68,12 @@ async function loadDomains() {
         params.set(
             "jump_type",
             type
+        );
+
+    if (method)
+        params.set(
+            "jump_method",
+            method
         );
 
     if (enabled)
@@ -154,6 +167,7 @@ function renderDomains() {
         redirect: "重定向",
         js: "JS",
         html: "HTML",
+        iframe: "Iframe"
     };
 
     for (

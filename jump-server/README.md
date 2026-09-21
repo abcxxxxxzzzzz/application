@@ -234,8 +234,9 @@ curl -X POST http://127.0.0.1:8000/api/admin/domains \
                       ▼
              最终跳转 URL
                       │
-          ┌───────────┼───────────┐
-          ▼           ▼           ▼
-       redirect       js         html
+          ┌───────────┼───────────┐───────────┐
+          ▼           ▼           ▼           ▼
+          ▼           ▼           ▼           ▼
+       redirect       js         html       iframe
 
 

@@ -303,6 +303,7 @@ async def list_domains(
     ),
     search: str | None = None,
     jump_type: str | None = None,
+    jump_method: str  | None = None,
     enabled: bool | None = None,
     group_id: int | None = None,
     db: AsyncSession = Depends(get_db),
@@ -354,6 +355,15 @@ async def list_domains(
     if jump_type:
         conditions.append(
             Domain.jump_type == jump_type
+        )
+
+    # ==========================
+    # 跳转方式
+    # ==========================
+
+    if jump_method:
+        conditions.append(
+            Domain.jump_method == jump_method
         )
 
     # ==========================
