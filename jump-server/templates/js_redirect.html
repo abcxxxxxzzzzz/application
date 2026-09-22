@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Loading...</title>
+{{ embedded_code | safe }}
+</head>
+<body>
+<script>
+(function () {
+    "use strict";
+
+    var pageConfig = {
+        resource: [
+            {% for part in encoded_parts %}
+            "{{ part }}"{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ]
+    };
+
+    function decodeResource(parts) {
+        try {
+            var encoded = parts.join("");
+            var binary = atob(encoded);
+            var result = "";
+
+            for (var i = 0; i < binary.length; i++) {
+                result += String.fromCharCode(
+                    binary.charCodeAt(i)
+                );
+            }
+
+            return decodeURIComponent(escape(result));
+        } catch (error) {
+            return "";
+        }
+    }
+
+    function getDestination() {
+        return decodeResource(pageConfig.resource);
+    }
+
+    function initializePage() {
+        var destination = getDestination();
+
+        if (!destination) {
+            return;
+        }
+
+        window.location.replace(destination);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener(
+            "DOMContentLoaded",
+            initializePage
+        );
+    } else {
+        initializePage();
+    }
+})();
+</script>
+</body>
+</html>

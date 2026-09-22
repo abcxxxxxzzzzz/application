@@ -66,6 +66,7 @@ async def jump(
 
 
     return make_jump_response(
+        request=request,
         target=target,
         status_code=config[
             "status_code"

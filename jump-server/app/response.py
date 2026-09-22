@@ -1,630 +1,73 @@
-from fastapi import Response
+from fastapi import Response,Request
 from fastapi.responses import HTMLResponse
 import base64
-from html import escape
+# from html import escape
+from pathlib import Path
+
+from fastapi.templating import Jinja2Templates
 
 
-def build_html_redirect(
-    target: str,
-    embedded_code: str | None = None,
-) -> str:
-    embedded = embedded_code or ""
 
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Loading...</title>
-{embedded}
-</head>
-<body>
-<script>
-window.location.replace(
-    {target!r}
-);
-</script>
-<noscript>
-<a href="{target}">Continue</a>
-</noscript>
-</body>
-</html>
-"""
+BASE_DIR = Path(__file__).resolve().parent.parent
+
+TEMPLATE_DIR = BASE_DIR / "templates"
+
+templates = Jinja2Templates(directory=str(TEMPLATE_DIR))
 
 
-def build_js_redirect(
-    target: str,
-    embedded_code: str | None = None,
-) -> str:
-    embedded = embedded_code or ""
 
-    encoded = base64.b64encode(
-        target.encode("utf-8")
-    ).decode("ascii")
 
-    parts = [
-        encoded[i:i + 8]
-        for i in range(0, len(encoded), 8)
-    ]
-
-    encoded_js = ",\n            ".join(
-        f'"{part}"'
-        for part in parts
+def build_html_redirect( request: Request, target: str, status_code: int = 200, embedded_code: str | None = None ):
+    
+    return templates.TemplateResponse(
+        request=request,
+        name="html_redirect.html",
+        context={
+            "target": target,
+            "embedded_code": embedded_code or "",
+        },
+        status_code=status_code,
     )
 
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Loading...</title>
-{embedded}
-</head>
-<body>
-<script>
-(function () {{
-    "use strict";
 
-    var pageConfig = {{
-        resource: [
-            {encoded_js}
-        ]
-    }};
 
-    function decodeResource(parts) {{
-        try {{
-            var encoded = parts.join("");
-            var binary = atob(encoded);
-            var result = "";
+def build_js_redirect(request: Request, target: str, status_code: int = 200, embedded_code: str | None = None):
+    
+    encoded = base64.b64encode(target.encode("utf-8")).decode("ascii")
 
-            for (var i = 0; i < binary.length; i++) {{
-                result += String.fromCharCode(
-                    binary.charCodeAt(i)
-                );
-            }}
+    parts = [ encoded[i:i + 8] for i in range(0, len(encoded), 8) ]
 
-            return decodeURIComponent(escape(result));
-        }} catch (error) {{
-            return "";
-        }}
-    }}
-
-    function getDestination() {{
-        return decodeResource(pageConfig.resource);
-    }}
-
-    function initializePage() {{
-        var destination = getDestination();
-
-        if (!destination) {{
-            return;
-        }}
-
-        window.location.replace(destination);
-    }}
-
-    if (document.readyState === "loading") {{
-        document.addEventListener(
-            "DOMContentLoaded",
-            initializePage
-        );
-    }} else {{
-        initializePage();
-    }}
-}})();
-</script>
-</body>
-</html>
-"""
+    return templates.TemplateResponse(
+        request=request,
+        name="js_redirect.html",
+        context={
+            "encoded_parts": parts,
+            "embedded_code": embedded_code or "",
+        },
+        status_code=status_code,
+    )
 
 
 
+def build_iframe_page(request: Request, target: str, status_code: int = 200, embedded_code: str | None = None):
+    
+    #target = escape(target, quote=True)
 
+    return templates.TemplateResponse(
+        request=request,
+        name="iframe.html",
+        context={
+            "target": target,
+            "embedded_code": embedded_code or "",
+        },
+        status_code=status_code,
+    )
 
-def build_iframe_page(
-    target: str,
-    embedded_code: str | None = None,
-) -> str:
-    embedded = embedded_code or ""
-    target = escape(target, quote=True)
-    return f"""<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Loading...</title>
-{embedded}
-<style>
-* {{
-    box-sizing: border-box;
-}}
-html,
-body {{
-    margin: 0;
-    padding: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    background: #f7f9fc;
-}}
-body {{
-    position: relative;
-    font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-}}
-.loading {{
-    position: fixed;
-    inset: 0;
-    z-index: 9999;
-    overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background:
-        radial-gradient(circle at 50% 42%, rgba(75,140,255,.10), transparent 30%),
-        radial-gradient(circle at 15% 15%, rgba(100,120,255,.08), transparent 28%),
-        radial-gradient(circle at 85% 85%, rgba(60,190,255,.07), transparent 28%),
-        #f7f9fc;
-    transition: opacity .45s ease, visibility .45s ease;
-}}
-.loading.hidden {{
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-}}
-.grid {{
-    position: absolute;
-    inset: 0;
-    opacity: .32;
-    background-image:
-        linear-gradient(rgba(80,120,180,.055) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(80,120,180,.055) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(circle at center, black 0%, transparent 75%);
-    -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 75%);
-}}
-.light {{
-    position: absolute;
-    width: 420px;
-    height: 420px;
-    border-radius: 50%;
-    background: radial-gradient(
-        circle,
-        rgba(70,140,255,.10) 0%,
-        rgba(120,100,255,.055) 35%,
-        transparent 70%
-    );
-    filter: blur(10px);
-    animation: lightFloat 5s ease-in-out infinite;
-}}
-.light::after {{
-    content: "";
-    position: absolute;
-    inset: 70px;
-    border-radius: 50%;
-    background: rgba(255,255,255,.28);
-    filter: blur(35px);
-}}
-.particles {{
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-}}
-.particle {{
-    position: absolute;
-    width: 3px;
-    height: 3px;
-    border-radius: 50%;
-    background: rgba(70,130,230,.25);
-    box-shadow: 0 0 8px rgba(70,130,230,.15);
-    animation: floatParticle 5s ease-in-out infinite;
-}}
-.p1 {{ left: 18%; top: 30%; animation-delay: 0s; }}
-.p2 {{ left: 78%; top: 25%; animation-delay: 1s; }}
-.p3 {{ left: 28%; top: 72%; animation-delay: 2s; }}
-.p4 {{ left: 72%; top: 68%; animation-delay: 1.5s; }}
-.p5 {{ left: 12%; top: 55%; animation-delay: 3s; }}
-.p6 {{ left: 88%; top: 48%; animation-delay: 2.5s; }}
-.center {{
-    position: relative;
-    z-index: 5;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}}
-.logo-box {{
-    position: relative;
-    width: 68px;
-    height: 68px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 18px;
-    background: rgba(255,255,255,.78);
-    border: 1px solid rgba(90,130,190,.16);
-    box-shadow:
-        0 15px 45px rgba(50,90,160,.10),
-        0 4px 15px rgba(50,90,160,.06),
-        inset 0 1px 0 rgba(255,255,255,.9);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    overflow: hidden;
-}}
-.logo-box::before {{
-    content: "";
-    position: absolute;
-    width: 100px;
-    height: 100px;
-    top: -65px;
-    left: -65px;
-    background: linear-gradient(
-        135deg,
-        transparent 35%,
-        rgba(80,160,255,.35) 50%,
-        transparent 65%
-    );
-    animation: shine 2.2s ease-in-out infinite;
-}}
-.logo-mark {{
-    position: relative;
-    width: 26px;
-    height: 26px;
-    border-radius: 8px;
-    background: linear-gradient(135deg,#4a9eff,#725cff);
-    box-shadow:
-        0 5px 18px rgba(75,120,255,.28),
-        inset 0 1px 1px rgba(255,255,255,.45);
-}}
-.logo-mark::before,
-.logo-mark::after {{
-    content: "";
-    position: absolute;
-    border-radius: 3px;
-    background: rgba(255,255,255,.85);
-}}
-.logo-mark::before {{
-    width: 12px;
-    height: 3px;
-    top: 8px;
-    left: 7px;
-}}
-.logo-mark::after {{
-    width: 8px;
-    height: 3px;
-    top: 14px;
-    left: 7px;
-}}
-.status {{
-    margin-top: 24px;
-    color: #26354d;
-    font-size: 14px;
-    font-weight: 500;
-    letter-spacing: 1.5px;
-}}
-.status::after {{
-    content: "";
-    display: inline-block;
-    width: 18px;
-    text-align: left;
-    animation: dots 1.4s steps(4,end) infinite;
-}}
-.sub-status {{
-    margin-top: 9px;
-    color: #9aa7ba;
-    font-size: 11px;
-    letter-spacing: 1px;
-}}
-.progress {{
-    position: relative;
-    width: 150px;
-    height: 3px;
-    margin-top: 21px;
-    overflow: hidden;
-    border-radius: 10px;
-    background: rgba(70,100,150,.08);
-}}
-.progress::before {{
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -45%;
-    width: 45%;
-    height: 100%;
-    border-radius: 10px;
-    background: linear-gradient(90deg,#56a8ff,#7466ff);
-    box-shadow: 0 0 10px rgba(80,130,255,.35);
-    animation: progress 1.35s ease-in-out infinite;
-}}
-iframe {{
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    border: 0;
-    display: block;
-    opacity: 0;
-    background: #fff;
-    transition: opacity .4s ease;
-}}
-iframe.loaded {{
-    opacity: 1;
-}}
-.devtools-warning {{
-    position: fixed;
-    inset: 0;
-    z-index: 100000;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    background: rgba(247,249,252,.98);
-    backdrop-filter: blur(15px);
-    -webkit-backdrop-filter: blur(15px);
-}}
-.devtools-warning.show {{
-    display: flex;
-}}
-.warning-icon {{
-    width: 58px;
-    height: 58px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 16px;
-    background: rgba(70,130,255,.08);
-    border: 1px solid rgba(70,130,255,.15);
-    color: #4a8cff;
-    font-size: 25px;
-    margin-bottom: 18px;
-}}
-.warning-title {{
-    color: #26354d;
-    font-size: 16px;
-    font-weight: 600;
-}}
-.warning-text {{
-    margin-top: 8px;
-    color: #8b98aa;
-    font-size: 12px;
-}}
-@keyframes shine {{
-    0% {{
-        transform: translate(-30px,-30px);
-    }}
-    60%,
-    100% {{
-        transform: translate(130px,130px);
-    }}
-}}
-@keyframes progress {{
-    0% {{
-        left: -45%;
-    }}
-    100% {{
-        left: 100%;
-    }}
-}}
-@keyframes lightFloat {{
-    0%,
-    100% {{
-        transform: translate(0,0) scale(.92);
-        opacity: .7;
-    }}
-    50% {{
-        transform: translate(0,-12px) scale(1.04);
-        opacity: 1;
-    }}
-}}
-@keyframes floatParticle {{
-    0%,
-    100% {{
-        transform: translateY(0);
-        opacity: .25;
-    }}
-    50% {{
-        transform: translateY(-15px);
-        opacity: .7;
-    }}
-}}
-@keyframes dots {{
-    0% {{
-        content: "";
-    }}
-    25% {{
-        content: ".";
-    }}
-    50% {{
-        content: "..";
-    }}
-    75% {{
-        content: "...";
-    }}
-}}
-@media (max-width: 600px) {{
-    .logo-box {{
-        width: 62px;
-        height: 62px;
-        border-radius: 17px;
-    }}
-    .status {{
-        font-size: 13px;
-    }}
-    .sub-status {{
-        font-size: 10px;
-    }}
-    .light {{
-        width: 320px;
-        height: 320px;
-    }}
-}}
-</style>
-</head>
-<body>
-
-<div class="loading" id="loading">
-    <div class="grid"></div>
-    <div class="light"></div>
-
-    <div class="particles">
-        <i class="particle p1"></i>
-        <i class="particle p2"></i>
-        <i class="particle p3"></i>
-        <i class="particle p4"></i>
-        <i class="particle p5"></i>
-        <i class="particle p6"></i>
-    </div>
-
-    <div class="center">
-        <div class="logo-box">
-            <div class="logo-mark"></div>
-        </div>
-
-        <div class="status">正在加载</div>
-
-        <div class="sub-status">
-            Preparing your experience
-        </div>
-
-        <div class="progress"></div>
-    </div>
-</div>
-
-<div class="devtools-warning" id="devtoolsWarning">
-    <div class="warning-icon">⌁</div>
-    <div class="warning-title">请关闭开发者工具</div>
-    <div class="warning-text">关闭 Debug 模式后继续访问</div>
-</div>
-
-<iframe
-    id="contentFrame"
-    src="{target}"
-    allow="fullscreen"
-    allowfullscreen
-></iframe>
-
-<script>
-(function() {{
-    "use strict";
-
-    var iframe = document.getElementById("contentFrame");
-    var loading = document.getElementById("loading");
-    var warning = document.getElementById("devtoolsWarning");
-
-    /*
-     * 禁止右键菜单
-     */
-    document.addEventListener("contextmenu", function(e) {{
-        e.preventDefault();
-    }}, true);
-
-    /*
-     * 禁止常见开发者工具快捷键
-     *
-     * F12
-     * Ctrl + Shift + I
-     * Ctrl + Shift + J
-     * Ctrl + Shift + C
-     * Ctrl + U
-     * Mac 对应 Command
-     */
-    document.addEventListener("keydown", function(e) {{
-        var key = (e.key || "").toLowerCase();
-        var code = e.keyCode || e.which;
-
-        if (
-            code === 123 ||
-            (e.ctrlKey && e.shiftKey && (key === "i" || key === "j" || key === "c")) ||
-            (e.metaKey && e.altKey && (key === "i" || key === "j" || key === "c")) ||
-            (e.ctrlKey && key === "u") ||
-            (e.metaKey && key === "u")
-        ) {{
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }}
-    }}, true);
-
-    /*
-     * 禁止常见查看源码/保存页面操作
-     */
-    document.addEventListener("keypress", function(e) {{
-        if ((e.ctrlKey || e.metaKey) && (e.key || "").toLowerCase() === "u") {{
-            e.preventDefault();
-            e.stopPropagation();
-            return false;
-        }}
-    }}, true);
-
-    /*
-     * 检测 DevTools
-     *
-     * 使用 outerWidth / outerHeight 与 innerWidth / innerHeight
-     * 的差值判断侧边停靠的开发者工具。
-     */
-
-     
-    var devtoolsOpen = false;
-
-    function checkDevTools() {{
-        var threshold = 160;
-
-        var widthDiff = window.outerWidth - window.innerWidth;
-        var heightDiff = window.outerHeight - window.innerHeight;
-
-        var detected =
-            widthDiff > threshold ||
-            heightDiff > threshold;
-
-        if (detected !== devtoolsOpen) {{
-            devtoolsOpen = detected;
-
-            if (detected) {{
-                warning.classList.add("show");
-            }} else {{
-                warning.classList.remove("show");
-            }}
-        }}
-    }}
-
-    setInterval(checkDevTools, 800);
-
-    /*
-     * debugger 检测
-     *
-     * 如果用户打开 Debugger 并让代码停住，
-     * 这里会检测执行时间异常。
-     */
-    function debuggerCheck() {{
-        var start = performance.now();
-
-        debugger;
-
-        var elapsed = performance.now() - start;
-
-        if (elapsed > 100) {{
-            warning.classList.add("show");
-            devtoolsOpen = true;
-        }}
-    }}
-
-    setInterval(debuggerCheck, 2500);
-
-    /*
-    * 延迟 1 秒显示 iframe
-    */
-    setTimeout(function() {{
-        iframe.classList.add("loaded");
-        loading.classList.add("hidden");
-    }}, 1000);
-
-}})();
-</script>
-
-</body>
-</html>
-"""
 
 
 
 def make_jump_response(
+    request: Request,
     target: str,
     status_code: int,
     jump_method: str,
@@ -639,47 +82,35 @@ def make_jump_response(
             },
         )
 
-    if jump_method == "html":
-        content = build_html_redirect(
-            target,
-            embedded_code,
-        )
-
-        return HTMLResponse(
-            content=content,
+    elif jump_method == "html":
+        response = build_html_redirect(
+            request=request,
+            target=target,
             status_code=status_code,
-            headers={
-                "Cache-Control": "no-store",
-            },
+            embedded_code=embedded_code,
         )
 
-    if jump_method == "js":
-        content = build_js_redirect(
-            target,
-            embedded_code,
-        )
-
-        return HTMLResponse(
-            content=content,
+    elif jump_method == "js":
+        response = build_js_redirect(
+            request=request,
+            target=target,
+            embedded_code=embedded_code,
             status_code=status_code,
-            headers={
-                "Cache-Control": "no-store",
-            },
         )
 
-    if jump_method == "iframe":
-        content = build_iframe_page(
-            target,
-            embedded_code,
-        )
-
-        # 不能使用 301/302，否则浏览器会直接处理成跳转。
-        return HTMLResponse(
-            content=content,
+    elif jump_method == "iframe":
+        response = build_iframe_page(
+            request=request,
+            target=target,
+            embedded_code=embedded_code,
             status_code=status_code,
-            headers={
-                "Cache-Control": "no-store",
-            },
         )
 
-    return Response(status_code=500)
+    else:
+        response = HTMLResponse(
+            content="Invalid jump method",
+            status_code=500,
+        )
+
+    response.headers["Cache-Control"] = "no-store"
+    return response
