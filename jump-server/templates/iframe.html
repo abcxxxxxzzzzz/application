@@ -367,6 +367,48 @@ iframe.loaded {
         height: 320px;
     }
 }
+
+
+/* 监听三方网站进度 CSS 添加 */
+.page-progress {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 3px;
+    z-index: 100001;
+    opacity: 0;
+    pointer-events: none;
+    background: linear-gradient(90deg,#56a8ff,#7466ff,#56a8ff);
+    box-shadow: 0 0 10px rgba(80,130,255,.35);
+}
+
+.page-progress.loading {
+    width: 85%;
+    opacity: 1;
+    animation: pageProgress 1.2s ease-in-out infinite;
+}
+
+.page-progress.finish {
+    width: 100%;
+    opacity: 1;
+    transition: width .18s ease, opacity .25s ease .1s;
+}
+
+@keyframes pageProgress {
+    0% {
+        width: 8%;
+    }
+
+    50% {
+        width: 60%;
+    }
+
+    100% {
+        width: 85%;
+    }
+}
+
 </style>
 </head>
 
@@ -411,6 +453,8 @@ iframe.loaded {
     src="{{ target }}"
     allow="fullscreen"
     allowfullscreen
+    allow-top-navigation
+    allow-top-navigation-by-user-activation
 ></iframe>
 
 <script>
@@ -453,50 +497,107 @@ iframe.loaded {
         }
     }, true);
 
-    var devtoolsOpen = false;
+    // var devtoolsOpen = false;
 
-    function checkDevTools() {
-        var threshold = 160;
+    // function checkDevTools() {
+    //     var threshold = 160;
+    //     var widthDiff = window.outerWidth - window.innerWidth;
+    //     var heightDiff = window.outerHeight - window.innerHeight;
+    //     var detected = widthDiff > threshold || heightDiff > threshold;
 
-        var widthDiff = window.outerWidth - window.innerWidth;
-        var heightDiff = window.outerHeight - window.innerHeight;
+    //     if (detected !== devtoolsOpen) {
+    //         devtoolsOpen = detected;
+    //         if (detected) {
+    //             warning.classList.add("show");
+    //         } else {
+    //             warning.classList.remove("show");
+    //         }
+    //     }
+    // }
 
-        var detected =
-            widthDiff > threshold ||
-            heightDiff > threshold;
+    // setInterval(checkDevTools, 800);
 
-        if (detected !== devtoolsOpen) {
-            devtoolsOpen = detected;
+    // function debuggerCheck() {
+    //     var start = performance.now();
+    //     debugger;
+    //     var elapsed = performance.now() - start;
 
-            if (detected) {
-                warning.classList.add("show");
-            } else {
-                warning.classList.remove("show");
-            }
-        }
-    }
+    //     if (elapsed > 100) {
+    //         warning.classList.add("show");
+    //         devtoolsOpen = true;
+    //     }
+    // }
 
-    setInterval(checkDevTools, 800);
+    // setInterval(debuggerCheck, 2500);
 
-    function debuggerCheck() {
-        var start = performance.now();
-
-        debugger;
-
-        var elapsed = performance.now() - start;
-
-        if (elapsed > 100) {
-            warning.classList.add("show");
-            devtoolsOpen = true;
-        }
-    }
-
-    setInterval(debuggerCheck, 2500);
-
+    // 初始遮罩在 1.5 秒后隐藏
     setTimeout(function() {
         iframe.classList.add("loaded");
         loading.classList.add("hidden");
-    }, 1200);
+    }, 1500);
+
+    // 接收三方 iframe 注入脚本通过 postMessage 发送的进度事件
+    var pageProgress = null;
+    var progressTimer = null;
+    var progressWatchdog = null;
+
+    function getProgressElement() {
+        if (!pageProgress) {
+            pageProgress = document.createElement("div");
+            pageProgress.id = "pageProgress";
+            pageProgress.className = "page-progress";
+            document.body.appendChild(pageProgress);
+        }
+        return pageProgress;
+    }
+
+    function startProgress() {
+        var bar = getProgressElement();
+        clearTimeout(progressTimer);
+        clearTimeout(progressWatchdog);
+
+        bar.classList.remove("finish", "loading");
+        void bar.offsetWidth;
+        bar.classList.add("loading");
+
+        // 防止三方页面异常时进度条一直显示
+        progressWatchdog = setTimeout(finishProgress, 10000);
+    }
+
+    function finishProgress() {
+        if (!pageProgress) return;
+
+        clearTimeout(progressTimer);
+        clearTimeout(progressWatchdog);
+        pageProgress.classList.remove("loading");
+        pageProgress.classList.add("finish");
+
+        progressTimer = setTimeout(function() {
+            pageProgress.classList.remove("finish");
+        }, 300);
+    }
+
+    // 默认父页面标题为空，收到 iframe 标题后再更新浏览器标签标题
+    document.title = "⚡ 页面加载中…";
+
+    window.addEventListener("message", function (event) {
+        // 只接收当前 iframe 发来的消息
+        if (event.source !== iframe.contentWindow) return;
+        if (!event.data || typeof event.data.type !== "string") return;
+
+        if (event.data.type === "page-progress-start") {
+            startProgress();
+
+        } else if (event.data.type === "page-progress-end") {
+            finishProgress();
+
+        } else if (event.data.type === "iframe-title") {
+            document.title = typeof event.data.title === "string"
+                ? event.data.title
+                : "";
+
+        }
+    });
 })();
 </script>
 
