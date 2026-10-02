@@ -1,0 +1,174 @@
+package logger
+
+import (
+	"GinOne/config"
+	"context"
+	"os"
+	"path/filepath"
+	"time"
+
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
+)
+
+type contextKey string
+
+const RequestIDKey contextKey = "request_id"
+
+// loggerKey 用于在 context 中缓存已绑定 request_id 的 SugaredLogger，
+// 避免每次 WithCtx 调用都创建新的 logger 实例。
+const loggerKey contextKey = "ctx_logger"
+
+var (
+	// Log 是全局 SugaredLogger，方便开发使用
+	Log *zap.SugaredLogger
+	// RawLog 是全局 zap.Logger，高性能场景使用
+	RawLog *zap.Logger
+)
+
+// init 提供一个开箱即用的 fallback logger
+func init() {
+	RawLog = zap.Must(zap.NewProduction())
+	Log = RawLog.Sugar()
+}
+
+func Init(cfg *config.LogConfig) {
+	// 编码器配置
+	encoderCfg := zap.NewProductionEncoderConfig()
+	encoderCfg.TimeKey = "ts"
+	encoderCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+	encoderCfg.EncodeLevel = zapcore.CapitalLevelEncoder
+
+	// 日志级别
+	level := zapcore.DebugLevel
+	switch cfg.Level {
+	case "info":
+		level = zapcore.InfoLevel
+	case "warn":
+		level = zapcore.WarnLevel
+	case "error":
+		level = zapcore.ErrorLevel
+	}
+
+	maxSize := cfg.MaxSize
+	if maxSize == 0 {
+		maxSize = 100
+	}
+	maxBackups := cfg.MaxBackups
+	if maxBackups == 0 {
+		maxBackups = 7
+	}
+	maxAge := cfg.MaxAge
+	if maxAge == 0 {
+		maxAge = 30
+	}
+
+	newFileWriter := func(filename string) zapcore.WriteSyncer {
+		return zapcore.AddSync(&lumberjack.Logger{
+			Filename:   filepath.Join(cfg.LogDir, filename),
+			MaxSize:    maxSize,
+			MaxBackups: maxBackups,
+			MaxAge:     maxAge,
+			Compress:   cfg.Compress,
+		})
+	}
+
+	var cores []zapcore.Core
+
+	// 控制台输出：所有级别
+	if cfg.Mode == "dev" {
+		devcfg := encoderCfg
+		devcfg.EncodeLevel = zapcore.CapitalColorLevelEncoder
+		cores = append(cores, zapcore.NewCore(
+			zapcore.NewConsoleEncoder(devcfg),
+			zapcore.AddSync(os.Stdout),
+			level,
+		))
+	} else {
+		cores = append(cores, zapcore.NewCore(
+			zapcore.NewJSONEncoder(encoderCfg),
+			zapcore.AddSync(os.Stdout),
+			level,
+		))
+	}
+
+	// 文件输出：按级别分文件
+	if cfg.LogDir != "" {
+		newBufferedFileWriter := func(filename string) zapcore.WriteSyncer {
+			// 配置 BufferedWriteSyncer：每 1 秒或 256KB 自动刷新
+			return &zapcore.BufferedWriteSyncer{
+				WS:            newFileWriter(filename),
+				Size:          256 * 1024,  // 256KB 缓冲区
+				FlushInterval: time.Second, // 每秒自动刷新
+			}
+		}
+
+		// app.log：所有级别
+		cores = append(cores, zapcore.NewCore(
+			zapcore.NewJSONEncoder(encoderCfg),
+			newBufferedFileWriter("app.log"),
+			level,
+		))
+
+		// warn.log：仅 Warn 级别
+		cores = append(cores, zapcore.NewCore(
+			zapcore.NewJSONEncoder(encoderCfg),
+			newBufferedFileWriter("warn.log"),
+			zap.LevelEnablerFunc(func(l zapcore.Level) bool {
+				return l == zapcore.WarnLevel
+			}),
+		))
+
+		// error.log：Error 及以上
+		cores = append(cores, zapcore.NewCore(
+			zapcore.NewJSONEncoder(encoderCfg),
+			newBufferedFileWriter("error.log"),
+			zap.LevelEnablerFunc(func(l zapcore.Level) bool {
+				return l >= zapcore.ErrorLevel
+			}),
+		))
+	}
+
+	// 不设置 AddCallerSkip，因为 SugaredLogger 会自动处理调用栈
+	zapLog := zap.New(zapcore.NewTee(cores...), zap.AddCaller())
+	RawLog = zapLog
+	Log = zapLog.Sugar()
+}
+
+// WithCtx 从 context 中提取 request_id 附加到日志。
+// 优先使用 context 中缓存的 logger 实例，避免每次调用都分配新对象。
+func WithCtx(ctx context.Context) *zap.SugaredLogger {
+	if RawLog == nil {
+		return zap.NewNop().Sugar()
+	}
+	if ctx == nil {
+		return Log
+	}
+	// 优先从 context 取缓存的 logger
+	if cached, ok := ctx.Value(loggerKey).(*zap.SugaredLogger); ok && cached != nil {
+		return cached
+	}
+	if reqID, ok := ctx.Value(RequestIDKey).(string); ok && reqID != "" {
+		return RawLog.With(zap.String("request_id", reqID)).Sugar()
+	}
+	return Log
+}
+
+// NewContext 将带有 request_id 的 logger 缓存到 context 中，
+// 供 WithCtx 复用，减少高 QPS 下的内存分配。
+func NewContext(ctx context.Context, reqID string) context.Context {
+	ctx = context.WithValue(ctx, RequestIDKey, reqID)
+	if RawLog != nil && reqID != "" {
+		l := RawLog.With(zap.String("request_id", reqID)).Sugar()
+		ctx = context.WithValue(ctx, loggerKey, l)
+	}
+	return ctx
+}
+
+// Sync 刷新日志缓冲
+func Sync() {
+	if Log != nil {
+		_ = Log.Sync()
+	}
+}

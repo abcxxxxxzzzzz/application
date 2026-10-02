@@ -1,0 +1,107 @@
+package database
+
+import (
+	"GinOne/config"
+	"GinOne/pkg/logger"
+	"context"
+	"errors"
+	"fmt"
+	"strings"
+	"time"
+
+	"github.com/redis/go-redis/v9"
+)
+
+// isExpectedErr 过滤掉正常业务/生命周期语义的 Redis 错误，避免日志噪音：
+//   - redis.Nil：key 不存在或 block 轮询超时无消息
+//   - context.Canceled：优雅关闭时主动取消
+//   - context.DeadlineExceeded：请求超时，由上层处理
+//   - BUSYGROUP：服务重启时消费者组已存在，watermill 幂等创建的正常副作用
+func isExpectedErr(err error) bool {
+	if errors.Is(err, redis.Nil) || errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return true
+	}
+	return err != nil && strings.HasPrefix(err.Error(), "BUSYGROUP")
+}
+
+// redisLogHook 在 debug 模式下记录每次 Redis 命令的耗时和 request_id
+type redisLogHook struct {
+	enabled bool
+}
+
+func newRedisLogHook(logCfg *config.LogConfig) *redisLogHook {
+	return &redisLogHook{enabled: logCfg.Level == "debug"}
+}
+
+func (h *redisLogHook) DialHook(next redis.DialHook) redis.DialHook {
+	return next
+}
+
+func (h *redisLogHook) ProcessHook(next redis.ProcessHook) redis.ProcessHook {
+	return func(ctx context.Context, cmd redis.Cmder) error {
+		start := time.Now()
+		err := next(ctx, cmd)
+		if !h.enabled {
+			return err
+		}
+		elapsed := time.Since(start)
+		args := maskArgs(cmd.Args())
+		// redis.Nil 表示 key 不存在或 block 超时，是正常业务语义，不记录为错误
+		if err != nil && !isExpectedErr(err) {
+			logger.WithCtx(ctx).Errorw("[redis]", "cmd", args, "elapsed_ms", elapsed.Milliseconds(), "error", err)
+		} else if err == nil {
+			logger.WithCtx(ctx).Debugw("[redis]", "cmd", args, "elapsed_ms", elapsed.Milliseconds())
+		}
+		return err
+	}
+}
+
+func (h *redisLogHook) ProcessPipelineHook(next redis.ProcessPipelineHook) redis.ProcessPipelineHook {
+	return func(ctx context.Context, cmds []redis.Cmder) error {
+		start := time.Now()
+		err := next(ctx, cmds)
+		if !h.enabled {
+			return err
+		}
+		elapsed := time.Since(start)
+		for _, cmd := range cmds {
+			args := maskArgs(cmd.Args())
+			if cmd.Err() != nil && !errors.Is(cmd.Err(), redis.Nil) {
+				logger.WithCtx(ctx).Errorw("[redis pipeline]", "cmd", args, "elapsed_ms", elapsed.Milliseconds(), "error", cmd.Err())
+			} else if cmd.Err() == nil {
+				logger.WithCtx(ctx).Debugw("[redis pipeline]", "cmd", args, "elapsed_ms", elapsed.Milliseconds())
+			}
+		}
+		return err
+	}
+}
+
+func maskArgs(args []interface{}) string {
+	if len(args) == 0 {
+		return ""
+	}
+	cmdName := strings.ToUpper(fmt.Sprintf("%v", args[0]))
+	// 脱敏列表：AUTH, CONFIG SET, 以及包含 password/token/secret 的 SET/HSET
+	isSensitive := false
+	switch cmdName {
+	case "AUTH", "HELLO":
+		isSensitive = true
+	case "CONFIG":
+		if len(args) > 1 && strings.ToUpper(fmt.Sprintf("%v", args[1])) == "SET" {
+			isSensitive = true
+		}
+	case "SET", "HSET", "HMSET", "SETEX", "SETNX":
+		// 检查 key 是否包含敏感关键词
+		if len(args) > 1 {
+			key := strings.ToLower(fmt.Sprintf("%v", args[1]))
+			if strings.Contains(key, "password") || strings.Contains(key, "token") || strings.Contains(key, "secret") {
+				isSensitive = true
+			}
+		}
+	}
+
+	if isSensitive && len(args) > 1 {
+		return fmt.Sprintf("[%v ****masked****]", args[0])
+	}
+	return fmt.Sprintf("%v", args)
+}

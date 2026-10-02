@@ -1,0 +1,91 @@
+# 应用基础信息。
+app:
+  name: MyAppName                 # 应用名称，用于日志文件命名和服务标识。
+  mode: debug                   # Gin 运行模式支持 debug、release 和 test。
+  port: 8323                    # HTTP 服务监听端口，取值范围为 1-65535。
+  auto_migrate: false           # 是否自动数据库迁移
+
+# HTTP 服务器超时配置。
+server:
+  read_timeout_seconds: 15     # 读取请求的超时时间，单位秒。
+  write_timeout_seconds: 15    # 写入响应的超时时间，单位秒。
+  idle_timeout_seconds: 60     # HTTP Keep-Alive 空闲连接的超时时间，单位秒。
+
+# 应用日志配置。
+log:
+  mode: prod # dev / prod
+  level: info
+  sql_level: warn
+  log_dir: logs            # 日志目录；warn.log / error.log 写入此目录，空则只输出控制台
+  max_size: 100            # 单文件最大 MB
+  max_backups: 7           # 保留旧文件数
+  max_age: 30              # 保留天数
+  compress: true           # 压缩归档
+
+# MySQL 连接及连接池配置；生产配置文件应限制访问权限，避免凭据泄露。
+mysql:
+  host: 127.0.0.1                  # MySQL 主机地址，支持域名、IPv4 或 IPv6。
+  port: 3307                       # MySQL 服务端口，取值范围为 1-65535。
+  database: jump                # 连接的数据库名称。
+  username: jump                   # 数据库用户名。
+  password: jump123                 # 数据库密码；生产环境请填写真实凭据并妥善保护配置文件
+  timeout: 1000                    # 建立数据库连接的超时时间，单位毫秒。
+  params: charset=utf8mb4&collation=utf8mb4_bin&parseTime=True&loc=Local  # MySQL 驱动参数，多个参数使用 & 分隔。
+  max_open_conns: 100              # 最大打开连接数；设置为 0 时保留 database/sql 的默认无限制值
+  max_idle_conns: 20               # 最大空闲连接数；设置为 0 时保留 database/sql 默认值。
+  conn_max_lifetime_seconds: 3600  # 单个连接的最长复用时间，单位秒；设置为 0 表示不限制。
+  max_lifetime: 3600               # 连接最大存活时间(秒)
+  conn_max_idle_time: 600          # 空闲连接最大存活时间(秒)
+  dial_timeout: 5                  # 连接超时(秒)
+  read_timeout: 10                 # 读超时(秒)
+  write_timeout: 10                # 写超时(秒)
+  ping_timeout: 3                  # 探活超时(秒)
+  prepare_stmt: true               # 缓存预编译语句，减少 SQL 解析开销
+  skip_default_transaction: true   # 非事务查询不包裹事务，提升约 30% 性能
+  log_sql: false                   # 是否输出 GORM SQL 日志，生产环境建议关闭以避免泄露敏感参数。
+
+
+# 可选 Redis 客户端配置。
+redis:
+  enabled: true            # 是否启用 Redis；关闭时不会创建客户端或校验其连接参数。
+  host: 127.0.0.1           # Redis 主机地址，支持域名、IPv4 或 IPv6。
+  port: 6378                # Redis 服务端口，取值范围为 1-65535。
+  password: ""              # Redis 认证密码；无需认证时留空。
+  db: 0                     # Redis 逻辑数据库编号，从 0 开始。
+  pool_size: 100            # Redis 客户端连接池大小，启用 Redis 时必须大于 0。
+  min_idle_conns: 10        # 最小空闲连接数
+  max_idle_conns: 50        # 最大空闲连接数
+  pool_timeout: 5           # 获取连接池超时(秒)
+  dial_timeout: 5           # 连接超时(秒)
+  read_timeout: 3           # 读超时(秒)
+  write_timeout: 3          # 写超时(秒)
+  conn_max_idle_time: 300   # 空闲连接最大存活时间(秒)
+  conn_max_lifetime: 3600   # 连接最大存活时间(秒)
+  ping_timeout: 3           # 探活超时(秒)
+  max_retries: 3            # 命令失败最大重试次数
+  min_retry_backoff: 8      # 最小重试退避时间(毫秒)
+  max_retry_backoff: 512    # 最大重试退避时间(毫秒)
+
+# 认证
+jwt:
+  secret: "1234567890"        # 认证密钥
+  expire: 86400              # 过期时间,秒单位
+
+
+# 浏览器跨域访问配置。
+cors:
+  # 允许访问的 http/https 来源列表；留空表示关闭跨域，不支持路径或通配符。
+  allowed_origins: []
+    # - http://127.0.0.1:8323
+    # - http://localhost:8323
+  # 是否允许跨域请求携带 Cookie、Authorization 等凭证。
+  allow_credentials: false
+
+# # 后台定时任务配置。
+# cron:
+#   # 配置键与代码中注册的任务名称保持一致。
+#   demo:
+#     # 是否启用该任务；关闭时不会注册到调度器。
+#     enabled: false
+#     # 标准五段式 cron 表达式，此处表示每小时第 10 分钟执行。
+#     expression: "10 * * * *"
