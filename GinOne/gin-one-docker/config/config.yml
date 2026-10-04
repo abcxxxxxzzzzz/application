@@ -93,6 +93,4 @@ cors:
 
 jump:
   first_domain:
-    - example1.com
-    - 43.163.238.95:18669
-    - example2.com
+    - test.apiezneq.com

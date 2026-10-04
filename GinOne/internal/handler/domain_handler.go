@@ -96,7 +96,7 @@ func (h *DomainHandler) FirstJump(c *gin.Context) {
 		}
 
 		// 2. 调用 svc 上方法 GetByName， 查询是否存在这个域名
-		_, err := h.domainSvc.GetByName(c.Request.Context(), host)
+		domain, err := h.domainSvc.GetByName(c.Request.Context(), host)
 		if err != nil {
 			response.Error(c,  errcode.ErrNotFound(), err.Error())
 			return
@@ -134,6 +134,7 @@ func (h *DomainHandler) FirstJump(c *gin.Context) {
     )
 
     c.Header("Content-Type", "text/html; charset=utf-8")
+		c.Status(domain.StatusCode)
 
 		if err := h.index.Execute(c.Writer, data); err != nil {
 			fmt.Println("template execute error:", err)
