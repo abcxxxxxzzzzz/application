@@ -71,7 +71,7 @@ func Setup(svcCtx *svc.ServiceContext, auth *middleware.AuthMiddleware) *gin.Eng
 	}
 
 	// 创建 handler（从 ServiceContext 获取依赖）
-	domainHandler := handler.NewDomainHandler(svcCtx.DomainSvc)
+	domainHandler := handler.NewDomainHandler(svcCtx.DomainSvc, svcCtx.Config)
 
 
 	// App 客户端接口

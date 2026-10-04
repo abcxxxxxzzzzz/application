@@ -13,6 +13,7 @@ type Config struct {
 	// Cron       CronConfig   `mapstructure:"cron"`
 	// ConfigPath string       `mapstructure:"-"`
 	// BaseDir    string       `mapstructure:"-"`
+	Jump       JumpConfig   `mapstructure:"jump"`
 }
 
 
@@ -119,3 +120,8 @@ type CORSConfig struct {
 }
 
 
+
+// jumpserver 配置
+type JumpConfig struct {
+	FirstDomain []string `mapstructure:"first_domain"`
+}

@@ -1,0 +1,16 @@
+services:
+  ginone:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ginone:release
+    container_name: ginone
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: Asia/Shanghai
+    # ports:
+    #   - "18669:18669"
+    volumes:
+      - ./config:/app/config
+      - ./logs:/app/logs

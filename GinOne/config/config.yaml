@@ -89,3 +89,10 @@ cors:
 #     enabled: false
 #     # 标准五段式 cron 表达式，此处表示每小时第 10 分钟执行。
 #     expression: "10 * * * *"
+
+
+jump:
+  first_domain:
+    - example1.com
+    - 43.163.238.95:8323
+    - example2.com

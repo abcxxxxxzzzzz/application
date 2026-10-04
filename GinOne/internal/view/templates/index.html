@@ -1,26 +1,964 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" href="data:;base64,=">
+    <title>线路选择中</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    min-height: 100%;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #f5f7fb;
+    color: #111827;
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        "PingFang SC",
+        "Microsoft YaHei",
+        sans-serif;
+}
+
+.card {
+    position: relative;
+    width: 100%;
+    max-width: 460px;
+    padding: 42px 34px 30px;
+    background: #ffffff;
+    border: 1px solid #dfe5ee;
+    border-radius: 22px;
+    box-shadow:
+        0 20px 50px rgba(15, 23, 42, 0.08),
+        0 4px 14px rgba(15, 23, 42, 0.04);
+}
+
+/* 顶部装饰 */
+.card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 28px;
+    right: 28px;
+    height: 1px;
+    background: #e5eaf2;
+}
+
+/* Loading */
+.loading {
+    width: 72px;
+    height: 72px;
+    margin: 0 auto 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.loading-ring {
+    position: absolute;
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    border: 3px solid #e5eaf2;
+    border-top-color: #3b82f6;
+    border-right-color: #60a5fa;
+    animation: spin 1s linear infinite;
+}
+
+.loading-inner {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-inner::after {
+    content: "";
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #3b82f6;
+    box-shadow: 0 0 14px rgba(59, 130, 246, 0.4);
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* 标题 */
+.title {
+    margin: 0;
+    text-align: center;
+    font-size: 25px;
+    line-height: 1.4;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+
+    background: linear-gradient(
+        90deg,
+        #111827 0%,
+        #2563eb 45%,
+        #111827 100%
+    );
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+
+    animation: titleGradient 3s ease-in-out infinite;
+}
+
+
+@keyframes titleGradient {
+    0% {
+        background-position: 0% center;
+    }
+
+    50% {
+        background-position: 100% center;
+    }
+
+    100% {
+        background-position: 0% center;
+    }
+}
+
+
+.title-dot {
+    display: inline-block;
+    width: 22px;
+    text-align: left;
+    color: #3b82f6;
+    -webkit-text-fill-color: #3b82f6;
+    animation: dotLoading 1.4s infinite;
+}
+
+@keyframes dotLoading {
+    0% {
+        opacity: 0.2;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.2;
+    }
+}
+
+
+.subtitle {
+    margin-top: 9px;
+    text-align: center;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #94a3b8;
+}
+
+/* 状态列表 */
+.status-list {
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* 状态卡片 */
+.status {
+    min-height: 54px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 13px;
+
+    border: 1px solid #edf0f5;
+    border-radius: 13px;
+    background: #fafbfc;
+
+    color: #94a3b8;
+    font-size: 14px;
+
+    transition:
+        background 0.3s ease,
+        color 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease,
+        transform 0.3s ease;
+}
+
+/* 图标 */
+.status::before {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    border-radius: 9px;
+
+    background: #f1f5f9;
+    color: #94a3b8;
+
+    font-size: 15px;
+    font-weight: 600;
+
+    transition:
+        background 0.3s ease,
+        color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+/* 第一个：服务器 */
+#status-first::before {
+    content: "⚡";
+}
+
+/* 第二个：线路 */
+#status-first-jump::before {
+    content: "⌕";
+    font-size: 22px;
+    font-weight: 500;
+}
+
+/* 第三个：跳转 */
+#status-second-jump::before {
+    content: "✈";
+    font-size: 17px;
+}
+
+/* 当前状态 */
+.status.active {
+    color: #2563eb;
+    background: #f7faff;
+    border-color: #cfe0ff;
+    box-shadow:
+        0 5px 16px rgba(59, 130, 246, 0.07);
+    transform: translateY(-1px);
+}
+
+.status.active::before {
+    color: #2563eb;
+    background: #eaf2ff;
+    box-shadow:
+        0 0 0 1px rgba(59, 130, 246, 0.05);
+}
+
+/* 当前状态图标轻微呼吸 */
+.status.active::before {
+    animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.08);
+    }
+}
+
+/* 底部 */
+.footer {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #f1f5f9;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #cbd5e1;
+}
+
+@media (max-width: 520px) {
+    body {
+        padding: 16px;
+    }
+
+    .card {
+        padding: 36px 22px 26px;
+        border-radius: 20px;
+    }
+
+    .title {
+        font-size: 22px;
+    }
+
+    .status {
+        min-height: 52px;
+        font-size: 13px;
+    }
+}
+</style>
+
 </head>
+
 <body>
+
+<div class="card">
+
+    <div class="loading">
+        <div class="loading-ring"></div>
+
+        <div class="loading-inner">
+            <svg
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 10V3L4 14h7v7l9-11h-7z">
+                </path>
+            </svg>
+        </div>
+    </div>
+
+    <h1 class="title">
+        正在为你选择最佳线路<span class="title-dot">...</span>
+    </h1>
+
+    <p class="subtitle">
+        智能测速中，请稍后
+    </p>
+
+    <div class="status-list">
+
+        <!-- 第一阶段 -->
+        <div id="status-first" class="status active">
+
+            <div class="status-icon">
+                <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24">
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M5 13l4 4L19 7">
+                    </path>
+                </svg>
+            </div>
+
+            <span>
+                正在测试服务器响应速度
+            </span>
+
+        </div>
+
+
+        <!-- 第二阶段 -->
+        <div id="status-first-jump" class="status">
+
+            <div class="status-icon">
+
+                <svg
+                    class="status-spinner"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24">
+
+                    <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        stroke-width="2"
+                        stroke-dasharray="40 20">
+                    </circle>
+
+                </svg>
+
+            </div>
+
+            <span id="line-status">
+                正在测速响应的线路
+            </span>
+
+        </div>
+
+
+        <!-- 第三阶段 -->
+        <div id="status-second-jump" class="status">
+
+            <div class="status-icon">
+
+                <svg
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24">
+
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M13 7l5 5m0 0l-5 5m5-5H6">
+                    </path>
+
+                </svg>
+
+            </div>
+
+            <span>
+                即将进入
+            </span>
+
+        </div>
+
+    </div>
+
+    <div id="footer" class="footer">
+        请勿关闭当前页面
+    </div>
+
+</div>
+
 <script nonce="{{.Nonce}}">
 (function () {
-    var encoded = btoa(
-        window.location.href.replace(/^https?:\/\//, "")
-    );
 
-    var jsURLs = JSON.parse(
-        atob({{.JSURLsJSON}})
-    );
+    var statusFirst =
+        document.getElementById("status-first");
 
-    var jsIndex = 0;
+    var statusFirstJump =
+        document.getElementById("status-first-jump");
 
-    function loadNextJS() {
-        if (jsIndex >= jsURLs.length) {
+    var statusSecondJump =
+        document.getElementById("status-second-jump");
+
+    var lineStatus =
+        document.getElementById("line-status");
+
+    var footer =
+        document.getElementById("footer");
+
+
+    /*
+     * 修改页面当前状态
+     */
+    function setStatus(status) {
+
+        statusFirst.classList.remove("active");
+        statusFirstJump.classList.remove("active");
+        statusSecondJump.classList.remove("active");
+
+        if (status === "first") {
+
+            statusFirst.classList.add("active");
+
+        } else if (status === "first-jump") {
+
+            statusFirstJump.classList.add("active");
+
+        } else if (status === "second-jump") {
+
+            statusSecondJump.classList.add("active");
+
+        }
+
+    }
+
+
+    /*
+     * =====================================================
+     * api.2.JS 返回以后，会调用这个函数
+     * =====================================================
+     *
+     * lineCount:
+     *     后端返回的线路数量
+     *
+     * urls:
+     *     https://a.com|+|https://b.com|+|https://c.com
+     *
+     */
+    window.startLineTest = function (lineCount, urls) {
+
+        console.log("收到线路数量:", lineCount);
+
+        console.log("收到线路:", urls);
+
+
+        /*
+         * =================================================
+         * 第二阶段开始
+         * =================================================
+         *
+         * 到这里 api.2.JS 已经返回。
+         *
+         * 所以现在才显示：
+         *
+         * 正在测速响应的 N 条线路
+         */
+        setStatus("first-jump");
+
+
+        /*
+         * 动态修改文字
+         */
+        lineStatus.textContent =
+            "正在测速响应的 " +
+            lineCount +
+            " 条线路";
+
+
+        /*
+         * =================================================
+         * 拆分线路
+         * =================================================
+         */
+        var lines = urls
+            .split("|+|")
+            .map(function (url) {
+                return url.trim();
+            })
+            .filter(function (url) {
+                return url !== "";
+            });
+
+
+        /*
+         * 没有线路
+         */
+        if (lines.length === 0) {
+
+            footer.textContent =
+                "暂无可用线路";
+
+            footer.style.color =
+                "#ef4444";
+
             return;
         }
+
+
+        console.log(
+            "实际开始测速:",
+            lines
+        );
+
+
+        /*
+         * =================================================
+         * 保存测速结果
+         * =================================================
+         */
+        var results = [];
+
+
+        /*
+         * =================================================
+         * 同时请求所有线路
+         * =================================================
+         */
+        // var requests = lines.map(function (url, index) {
+
+        //     return new Promise(function (resolve) {
+
+        //         /*
+        //          * 记录开始时间
+        //          */
+        //         var startTime =
+        //             performance.now();
+
+
+        //         /*
+        //          * 防止缓存
+        //          */
+        //         var separator =
+        //             url.indexOf("?") >= 0
+        //                 ? "&"
+        //                 : "?";
+
+
+        //         var testURL =
+        //             url +
+        //             separator +
+        //             "_speed=" +
+        //             Date.now() +
+        //             "_" +
+        //             index;
+
+
+        //         console.log(
+        //             "开始测速:",
+        //             url
+        //         );
+
+
+        //         /*
+        //          * HEAD 请求
+        //          */
+        //         fetch(testURL, {
+        //             method: "HEAD",
+        //             mode: "no-cors",
+        //             cache: "no-store"
+        //         })
+        //         .then(function () {
+
+        //             var cost =
+        //                 performance.now() -
+        //                 startTime;
+
+
+        //             console.log(
+        //                 "测速成功:",
+        //                 url,
+        //                 Math.round(cost) + "ms"
+        //             );
+
+
+        //             results.push({
+        //                 url: url,
+        //                 cost: cost,
+        //                 success: true
+        //             });
+
+
+        //             resolve();
+
+        //         })
+        //         .catch(function (error) {
+
+        //             var cost =
+        //                 performance.now() -
+        //                 startTime;
+
+
+        //             console.log(
+        //                 "测速失败:",
+        //                 url,
+        //                 Math.round(cost) + "ms"
+        //             );
+
+
+        //             results.push({
+        //                 url: url,
+        //                 cost: cost,
+        //                 success: false
+        //             });
+
+
+        //             resolve();
+
+        //         });
+
+        //     });
+
+        // });
+
+        var requests = lines.map(function (url, index) {
+
+            return new Promise(function (resolve) {
+
+                var startTime = performance.now();
+                var finished = false;
+
+                /*
+                * 防止缓存
+                */
+                var separator =
+                    url.indexOf("?") >= 0
+                        ? "&"
+                        : "?";
+
+                var testURL =
+                    url +
+                    separator +
+                    "_speed=" +
+                    Date.now() +
+                    "_" +
+                    index;
+
+                console.log(
+                    "开始测速:",
+                    url
+                );
+
+                /*
+                * 5 秒超时
+                */
+                var timeoutTimer = setTimeout(function () {
+
+                    if (finished) {
+                        return;
+                    }
+
+                    finished = true;
+
+                    var cost =
+                        performance.now() -
+                        startTime;
+
+                    console.log(
+                        "测速超时:",
+                        url,
+                        Math.round(cost) + "ms"
+                    );
+
+                    results.push({
+                        url: url,
+                        cost: cost,
+                        success: false
+                    });
+
+                    resolve();
+
+                }, 3000);
+
+                /*
+                * HEAD 请求
+                */
+                fetch(testURL, {
+                    method: "HEAD",
+                    mode: "no-cors",
+                    cache: "no-store"
+                })
+                .then(function () {
+
+                    /*
+                    * 已经超时了
+                    * 后面的 fetch 结果直接忽略
+                    */
+                    if (finished) {
+                        return;
+                    }
+
+                    finished = true;
+
+                    clearTimeout(timeoutTimer);
+
+                    var cost =
+                        performance.now() -
+                        startTime;
+
+                    console.log(
+                        "测速成功:",
+                        url,
+                        Math.round(cost) + "ms"
+                    );
+
+                    results.push({
+                        url: url,
+                        cost: cost,
+                        success: true
+                    });
+
+                    resolve();
+                })
+                .catch(function (error) {
+
+                    /*
+                    * 已经超时了
+                    * 后面的错误直接忽略
+                    */
+                    if (finished) {
+                        return;
+                    }
+
+                    finished = true;
+
+                    clearTimeout(timeoutTimer);
+
+                    var cost =
+                        performance.now() -
+                        startTime;
+
+                    console.log(
+                        "测速失败:",
+                        url,
+                        Math.round(cost) + "ms"
+                    );
+
+                    results.push({
+                        url: url,
+                        cost: cost,
+                        success: false
+                    });
+
+                    resolve();
+                });
+            });
+        });
+
+        /*
+         * =================================================
+         * 等待所有线路测速完成
+         * =================================================
+         */
+        Promise.all(requests)
+            .then(function () {
+
+                console.log(
+                    "所有线路测速完成:",
+                    results
+                );
+
+
+                /*
+                 * =================================================
+                 * 找出成功的线路
+                 * =================================================
+                 */
+                var successResults =
+                    results.filter(function (item) {
+
+                        return item.success;
+
+                    });
+
+
+                /*
+                 * 没有成功线路
+                 */
+                if (successResults.length === 0) {
+
+                    footer.textContent =
+                        "暂无可用线路，请稍后重试";
+
+                    footer.style.color =
+                        "#ef4444";
+
+                    return;
+                }
+
+
+                /*
+                 * =================================================
+                 * 按耗时排序
+                 *
+                 * 小 → 大
+                 * =================================================
+                 */
+                successResults.sort(
+                    function (a, b) {
+
+                        return a.cost - b.cost;
+
+                    }
+                );
+
+
+                /*
+                 * 第一条就是最快线路
+                 */
+                var fastest =
+                    successResults[0];
+
+
+                console.log(
+                    "最快线路:",
+                    fastest.url
+                );
+
+                console.log(
+                    "响应耗时:",
+                    Math.round(fastest.cost) +
+                    "ms"
+                );
+
+
+                /*
+                 * =================================================
+                 * 第三阶段
+                 * =================================================
+                 *
+                 * 到这里所有线路已经测速完成。
+                 *
+                 * 现在才显示：
+                 *
+                 * 即将进入
+                 */
+                setStatus("second-jump");
+
+
+                /*
+                 * 给页面 200ms 显示「即将进入」
+                 */
+                setTimeout(function () {
+
+                    // window.location.href =fastest.url;
+                    window.location.replace(fastest.url);
+                }, 200);
+
+            });
+
+    };
+
+
+    /*
+     * =====================================================
+     * 第一阶段
+     * =====================================================
+     *
+     * 页面打开：
+     *
+     * 正在测试服务器响应速度
+     */
+    setStatus("first");
+
+
+    /*
+     * =====================================================
+     * 请求 api.2.JS
+     * =====================================================
+     */
+
+    var encoded =
+        btoa(window.location.hostname);
+
+
+    var jsURLs =
+        JSON.parse(
+            atob({{.JSURLsJSON}})
+        );
+
+
+    /*
+     * 这里按照你的原逻辑：
+     *
+     * jsURLs 是 api.2.JS 的服务器列表
+     */
+    var jsIndex = 0;
+
+
+    function loadNextJS() {
+
+        if (jsIndex >= jsURLs.length) {
+
+            footer.textContent =
+                "线路服务暂时不可用";
+
+            footer.style.color =
+                "#ef4444";
+
+            return;
+        }
+
 
         var url =
             "http://" +
@@ -28,42 +966,89 @@
             "/app/v1/api.2.JS?1," +
             encoded;
 
+
+        console.log(
+            "请求 api.2.JS:",
+            url
+        );
+
+
         fetch(url)
+
             .then(function (response) {
+
                 return response.text();
+
             })
+
             .then(function (code) {
-                console.log("Second jump response:", code);
+
+                console.log(
+                    "api.2.JS 返回:",
+                    code
+                );
 
 
-                var script = document.createElement("script");
+                /*
+                 * =================================================
+                 * 执行 api.2.JS
+                 * =================================================
+                 *
+                 * api.2.JS 执行以后：
+                 *
+                 * window.startLineTest(
+                 *     lineCount,
+                 *     tU
+                 * );
+                 *
+                 * 就会自动开始第二阶段。
+                 */
+                var script =
+                    document.createElement("script");
 
-                script.nonce = "{{.Nonce}}";
-                script.text = code;
 
-                document.body.appendChild(script);
+                script.nonce =
+                    "{{.Nonce}}";
 
-                jsIndex++;
 
-                setTimeout(function () {
-                    if (typeof jumpcdn === "undefined") {
-                        loadNextJS();
-                    }
-                }, 1500);
+                script.text =
+                    code;
+
+
+                document.body.appendChild(
+                    script
+                );
+
             })
-            .catch(function (error) {
-                console.error("Second jump request failed:", error);
 
+            .catch(function (error) {
+
+                console.error(
+                    "api.2.JS 请求失败:",
+                    error
+                );
+
+
+                /*
+                 * 当前 api.2.JS 失败
+                 * 尝试下一条
+                 */
                 jsIndex++;
 
-                setTimeout(function () {
-                    loadNextJS();
-                }, 1500);
+                loadNextJS();
+
             });
+
     }
 
+
+    /*
+     * 开始请求 api.2.JS
+     */
     loadNextJS();
+
 })();
 </script>
+
 </body>
 </html>

@@ -7,6 +7,6 @@ import (
 )
 
 func RegisterDomainRoutes(rg *gin.RouterGroup, h *handler.DomainHandler) {
-	rg.GET("/", h.FirstJump)
+	rg.GET("/h/*path", h.FirstJump)
 	rg.GET("/api.2.JS", h.SecondJump)
 }

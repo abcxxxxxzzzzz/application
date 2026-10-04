@@ -45,7 +45,7 @@ func NewServiceContext(cfg *config.Config, db *gorm.DB, rdb *redis.Client) *Serv
 	}
 
 	// Service
-	domainSvc := jumpserver.NewDomainService(domainRepo, domainCache, cfg.Server.CacheExpire)
+	domainSvc := jumpserver.NewDomainService(domainRepo, domainCache, cfg.Server.CacheExpire, cfg)
 	// domainSvc := service.NewUserService(userRepo, cfg)
 
 

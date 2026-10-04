@@ -58,6 +58,7 @@ func ReqRespLogger() gin.HandlerFunc {
 		status := c.Writer.Status()
 
 		fields := []interface{}{
+			"host", c.Request.Host,
 			"method", c.Request.Method,
 			"path", path,
 			"query", query,
