@@ -31,7 +31,7 @@ mysql:
   password: jump123                 # 数据库密码；生产环境请填写真实凭据并妥善保护配置文件
   timeout: 1000                    # 建立数据库连接的超时时间，单位毫秒。
   params: charset=utf8mb4&collation=utf8mb4_bin&parseTime=True&loc=Local  # MySQL 驱动参数，多个参数使用 & 分隔。
-  max_open_conns: 1024              # 最大打开连接数；设置为 0 时保留 database/sql 的默认无限制值
+  max_open_conns: 100              # 最大打开连接数；设置为 0 时保留 database/sql 的默认无限制值
   max_idle_conns: 20               # 最大空闲连接数；设置为 0 时保留 database/sql 默认值。
   conn_max_lifetime_seconds: 3600  # 单个连接的最长复用时间，单位秒；设置为 0 表示不限制。
   max_lifetime: 3600               # 连接最大存活时间(秒)

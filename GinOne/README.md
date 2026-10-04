@@ -22,3 +22,12 @@
 ├── main.go             # 项目启动入口
 ├── go.mod              
 └── README.md      
+
+
+
+
+ CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o GinOne . \
+ && mv GinOne gin-one-docker/ \
+ && cd gin-one-docker/ \
+ && docker-compose build \
+ && docker-compose up -d && docker-compose logs -f
